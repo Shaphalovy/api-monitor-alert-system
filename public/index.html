@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API Health Monitor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div>
+        <h1>API Health Monitor</h1>
+        <p class="sub">AI-assisted alerts for patient and operational APIs</p>
+      </div>
+      <div class="topbar__actions">
+        <span class="live" id="liveStatus" role="status" aria-live="polite">Connecting…</span>
+        <button class="btn" id="refreshBtn" type="button">Refresh</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="stats" aria-label="Alert summary">
+      <div class="stat">
+        <span class="stat__label">Active alerts</span>
+        <span class="stat__value" id="statActive">–</span>
+      </div>
+      <div class="stat stat--critical">
+        <span class="stat__label">Critical</span>
+        <span class="stat__value" id="statCritical">–</span>
+      </div>
+      <div class="stat stat--high">
+        <span class="stat__label">High</span>
+        <span class="stat__value" id="statHigh">–</span>
+      </div>
+      <div class="stat stat--medium">
+        <span class="stat__label">Medium / Low</span>
+        <span class="stat__value" id="statOther">–</span>
+      </div>
+    </section>
+
+    <section class="filters" aria-label="Filters">
+      <label>
+        Status
+        <select id="statusFilter">
+          <option value="active" selected>Active</option>
+          <option value="resolved">Resolved</option>
+          <option value="all">All</option>
+        </select>
+      </label>
+      <label>
+        Severity
+        <select id="severityFilter">
+          <option value="" selected>All severities</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </label>
+    </section>
+
+    <div class="error" id="errorBox" role="alert" hidden></div>
+
+    <section id="alertList" class="alerts" aria-label="Alerts"></section>
+
+    <div class="empty" id="emptyState" hidden>
+      <p class="empty__title">No alerts here</p>
+      <p>Nothing matches these filters. Send some API responses below to try the system.</p>
+    </div>
+
+    <details class="tester">
+      <summary>Send test data to /monitor</summary>
+      <p class="hint">Paste a JSON array of API responses. Analysis can take a few seconds because each alert is written by the AI model.</p>
+      <textarea id="testInput" rows="12" spellcheck="false" aria-label="JSON input"></textarea>
+      <div class="tester__actions">
+        <button class="btn btn--primary" id="sendBtn" type="button">Send to /monitor</button>
+        <button class="btn" id="loadSampleBtn" type="button">Reset sample</button>
+        <span id="sendResult" class="hint" role="status" aria-live="polite"></span>
+      </div>
+    </details>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
