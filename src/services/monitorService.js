@@ -3,7 +3,7 @@ const logger = require('../config/logger');
 const { detectAnomalies } = require('./anomalyDetector');
 const { generateAlertMessage, safeName } = require('./alertGenerator');
 const { mapWithConcurrency } = require('../utils/concurrency');
-
+const { enqueueAlertEmail } = require('./emailService');
 const MAX_BATCH_SIZE = Number(process.env.MAX_BATCH_SIZE) || 100;
 const AI_CONCURRENCY = Number(process.env.AI_CONCURRENCY) || 3;
 
@@ -41,6 +41,7 @@ async function processOne(item, index) {
   try {
     const ai = await generateAlertMessage(item, result);
     const alert = await Alert.create(buildAlertDoc(item, result, ai));
+    enqueueAlertEmail(alert.toObject());
     return {
       index,
       apiName,

@@ -34,6 +34,10 @@ Create your env file (Windows: `copy .env.example .env`, macOS/Linux: `cp .env.e
 |---|---|---|
 | `MONGODB_URI` | yes | MongoDB connection string. Use database name `api_monitor`. |
 | `GEMINI_API_KEY` | no* | Gemini key. *Without it, alerts use the template message. |
+| `SMTP_USER` | no* | Gmail address used to send alert emails. *Email is off unless `SMTP_USER`, `SMTP_PASS` and `ALERT_EMAIL_TO` are all set. |
+| `SMTP_PASS` | no* | Gmail App Password (16 characters, needs 2-Step Verification). Never your normal password. |
+| `ALERT_EMAIL_TO` | no* | Address that receives the alert emails. |
+| `ALERT_EMAIL_MIN_SEVERITY` | no | Lowest severity that triggers an email: `low`, `medium`, `high` (default) or `critical`. |
 | `GEMINI_MODEL` | no | Default `gemini-3.5-flash-lite`. |
 | `PORT` | no | Default `3000`. |
 | `DNS_SERVERS` | no | e.g. `8.8.8.8,1.1.1.1`. Workaround for a Node.js SRV DNS issue on some Windows setups (`querySrv ECONNREFUSED`). |
@@ -110,6 +114,7 @@ src/
   services/
     anomalyDetector.js       rules and input validation
     alertGenerator.js        Gemini call, timeout, fallback template
+    emailService.js      sends alert emails (queued, never throws)
     monitorService.js        batch processing, saves alerts
   models/Alert.js            Mongoose schema
   middleware/errorHandler.js
@@ -130,15 +135,28 @@ logs/                        runtime logs (git-ignored)
 ## Testing
 
 ```bash
+node scripts/test-email.js             # checks SMTP login and sends one test alert email
 node scripts/test-detector.js          # detection rules, no server needed
 node scripts/test-alert-generator.js   # AI messages (add --no-ai for fallback only)
 node scripts/test-errors.js            # error handling, server must be running
 ```
 
+## Email notifications (optional)
+
+When an alert is saved with severity `high` or `critical`, an email is sent to `ALERT_EMAIL_TO`. The email contains the AI-written message plus the raw facts (status code, response time, records, whether the text came from Gemini or the template fallback).
+
+- Off by default. It turns on only when `SMTP_USER`, `SMTP_PASS` and `ALERT_EMAIL_TO` are set in `.env`.
+- Emails are sent from an in-memory queue, one at a time. `/monitor` never waits for SMTP, and a failed email is logged but never fails the request or loses the alert.
+- API-supplied text is HTML-escaped and line breaks are removed from the subject.
+- Uses Gmail SMTP with an App Password (https://myaccount.google.com/apppasswords). Gmail is fine for a demo but is not meant for production; use a transactional provider such as SES, SendGrid or Postmark there.
+- Test it with `node scripts/test-email.js`.
+
 ## Known limitations
 
 - Repeating the same failing input creates duplicate active alerts (no deduplication).
 - `/monitor` has no authentication or rate limiting.
-- Email reports (optional in the brief) are not implemented.
+- Email alerts use an in-memory queue sent one at a time (about 4 seconds each). A restart loses queued emails, and large batches are slow. Production should use a real queue and a transactional email provider.
+- Email goes out for every `high` or `critical` alert, so repeated identical failures send repeated emails (no de-duplication or digest).
+- Gmail limits personal accounts to about 500 recipients per day.
 - The AI may suggest a "likely cause". Treat it as a hint, not a fact.
 - No automated test framework, only the scripts above.
